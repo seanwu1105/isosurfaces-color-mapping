@@ -1,0 +1,23 @@
+[tool.poetry]
+name = "isosurfaces-color-mapping"
+version = "0.1.0"
+description = "CS530 Introduction to Scientific Visualization assignment 2 @Purdue."
+authors = ["Shuang Wu <seanwu1105@gmail.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "~3.11"
+vtk = "^9.2.5"
+pyside6 = "^6.4.2"
+
+
+[tool.poetry.group.dev.dependencies]
+pylint = "^2.16.1"
+black = "^23.1.0"
+pre-commit = "^3.0.4"
+pytest = "^7.2.1"
+pytest-cov = "^4.0.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
