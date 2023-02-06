@@ -82,7 +82,7 @@ def build_gui(
     layout = QGridLayout()
 
     vtk_widget, change_isovalue, change_clip = build_vtk_widget(
-        central, reader, isovalue_default
+        central, reader, isovalue_default, clips_default
     )
     layout.addWidget(vtk_widget, 0, 0, 1, -1)
 
@@ -133,6 +133,7 @@ def build_vtk_widget(
     parent: QObject,
     reader: vtkXMLImageDataReader,
     isovalue_default: int | None,
+    clips_default: list[int],
 ):
     def change_isovalue(value: int):
         contour_filter.SetValue(contour_index, value)
@@ -164,11 +165,11 @@ def build_vtk_widget(
     clip_planes = vtkPlanes()
     clip_planes.SetBounds(
         CLIP_X_MIN - 1,
-        CLIP_X_DEFAULT,
+        clips_default[0],
         CLIP_Y_MIN - 1,
-        CLIP_Y_DEFAULT,
+        clips_default[1],
         CLIP_Z_MIN - 1,
-        CLIP_Z_DEFAULT,
+        clips_default[2],
     )
 
     clip_filter = vtkClipPolyData()
