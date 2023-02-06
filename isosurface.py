@@ -1,6 +1,6 @@
 import argparse
 import sys
-from typing import Callable
+from typing import Callable, TypedDict
 
 from PySide6.QtCore import QObject, Qt
 from PySide6.QtWidgets import (
@@ -17,7 +17,12 @@ from vtkmodules.vtkCommonDataModel import vtkPlanes
 from vtkmodules.vtkFiltersCore import vtkClipPolyData, vtkContourFilter
 from vtkmodules.vtkIOXML import vtkXMLImageDataReader
 from vtkmodules.vtkRenderingAnnotation import vtkScalarBarActor
-from vtkmodules.vtkRenderingCore import vtkActor, vtkDataSetMapper, vtkRenderer
+from vtkmodules.vtkRenderingCore import (
+    vtkActor,
+    vtkColorTransferFunction,
+    vtkDataSetMapper,
+    vtkRenderer,
+)
 
 from src.vtk_side_effects import import_for_rendering_core
 
@@ -171,15 +176,34 @@ def build_vtk_widget(
     clip_filter.SetInsideOut(True)
     clip_filter.SetInputConnection(contour_filter.GetOutputPort())
 
+    isovalue_color_maps: dict[str, IsovalueColorMapping] = {
+        "skin": {
+            "value": 400,
+            "color": (229 / 255, 181 / 255, 161 / 255),
+        },
+        "muscle": {
+            "value": 1010,
+            "color": (171 / 255, 54 / 255, 54 / 255),
+        },
+        "bone": {
+            "value": 1135,
+            "color": (229 / 255, 229 / 255, 229 / 255),
+        },
+    }
+    ctf = vtkColorTransferFunction()
+    for _, mapping in isovalue_color_maps.items():
+        ctf.AddRGBPoint(mapping["value"], *mapping["color"])
+
     mapper = vtkDataSetMapper()
     mapper.SetScalarRange(isovalue_range)
+    mapper.SetLookupTable(ctf)
     mapper.SetInputConnection(clip_filter.GetOutputPort())
 
     actor = vtkActor()
     actor.SetMapper(mapper)
 
     scalar_bar = vtkScalarBarActor()
-    scalar_bar.SetLookupTable(mapper.GetLookupTable())  # type: ignore
+    scalar_bar.SetLookupTable(ctf)
 
     renderer = vtkRenderer()
     renderer.AddActor(actor)
@@ -194,6 +218,11 @@ def build_vtk_widget(
     change_isovalue(isovalue_default if isovalue_default else _isovalue_default)
 
     return widget, change_isovalue, change_clips
+
+
+class IsovalueColorMapping(TypedDict):
+    value: int
+    color: tuple[float, float, float]
 
 
 def get_default_isovalue(reader: vtkXMLImageDataReader) -> int:
