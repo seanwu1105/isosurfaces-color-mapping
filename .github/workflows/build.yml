@@ -20,7 +20,7 @@ jobs:
         run: poetry install --no-interaction --no-root
 
       - name: Test
-        run: poetry run python -m pytest
+        run: poetry run pytest
 
   lint:
     runs-on: ubuntu-latest
@@ -41,7 +41,7 @@ jobs:
 
       - name: Lint
         run: |
-          poetry run python -m pylint **/*.py --errors-only
-          poetry run python -m black **/*.py --check
+          poetry run pylint **/*.py --errors-only
+          poetry run black **/*.py --check
 
       - uses: jakebailey/pyright-action@v1
