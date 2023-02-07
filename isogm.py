@@ -48,7 +48,7 @@ def read_color_map(filename: str):
         }
 
 
-# Use GUI wigets to store the state of the application.
+# Use GUI widgets to store the state of the application.
 # pylint: disable=too-many-locals
 def build_gui(
     isovalue_filename: str,
@@ -75,7 +75,7 @@ def build_gui(
     )
     layout.addWidget(vtk_widget, 0, 0, 1, -1)
 
-    clip_sliders = build_clip_sliders(layout, clips_default, on_clip_changed)
+    clip_sliders = build_clip_sliders(layout, 1, clips_default, on_clip_changed)
 
     central.setLayout(layout)
     window.setCentralWidget(central)

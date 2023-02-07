@@ -33,6 +33,7 @@ CLIPS_MAX = [clip["max"] for clip in CLIPS_CONFIG.values()]
 
 def build_clip_sliders(
     layout: QGridLayout,
+    start_row: int,
     clips_default: list[int],
     on_clip_changed: Callable[[], None],
 ):
@@ -42,7 +43,7 @@ def build_clip_sliders(
     }
     clip_sliders: list[QSlider] = []
     for i, (name, (min_value, max_value, default_value)) in enumerate(
-        clip_widgets.items(), start=1
+        clip_widgets.items(), start=start_row
     ):
         clip_sliders.append(
             build_clip_row_widgets(
@@ -84,6 +85,7 @@ def get_clip_filter(clips_default: list[int]):
     clip_filter = vtkClipPolyData()
     clip_filter.SetClipFunction(clip_planes)
     clip_filter.SetInsideOut(True)
+    clip_filter.SetGenerateClipScalars(False)
     return clip_filter, change_clips
 
 

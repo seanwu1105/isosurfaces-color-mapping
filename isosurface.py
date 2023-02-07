@@ -46,7 +46,7 @@ def read_data(data_filename: str):
     return reader
 
 
-# Use GUI wigets to store the state of the application.
+# Use GUI widgets to store the state of the application.
 # pylint: disable=too-many-locals
 def build_gui(
     reader: vtkXMLImageDataReader,
@@ -86,7 +86,7 @@ def build_gui(
     isovalue_label = QLabel(str(_isovalue_default))
     layout.addWidget(isovalue_label, 1, 2)
 
-    clip_sliders = build_clip_sliders(layout, clips_default, on_clip_changed)
+    clip_sliders = build_clip_sliders(layout, 2, clips_default, on_clip_changed)
 
     central.setLayout(layout)
     window.setCentralWidget(central)
