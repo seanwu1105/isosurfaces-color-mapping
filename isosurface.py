@@ -1,6 +1,5 @@
 import argparse
 import sys
-from typing import Callable, TypedDict
 
 from PySide6.QtCore import QObject, Qt
 from PySide6.QtWidgets import (
@@ -11,35 +10,20 @@ from PySide6.QtWidgets import (
     QSlider,
     QWidget,
 )
-from vtkmodules.qt.QVTKRenderWindowInteractor import QVTKRenderWindowInteractor
-from vtkmodules.vtkCommonColor import vtkNamedColors
-from vtkmodules.vtkCommonDataModel import vtkPlanes
-from vtkmodules.vtkFiltersCore import vtkClipPolyData, vtkContourFilter
+from vtkmodules.vtkFiltersCore import vtkContourFilter
 from vtkmodules.vtkIOXML import vtkXMLImageDataReader
 from vtkmodules.vtkRenderingAnnotation import vtkScalarBarActor
 from vtkmodules.vtkRenderingCore import (
     vtkActor,
     vtkColorTransferFunction,
     vtkDataSetMapper,
-    vtkRenderer,
 )
 
+from src.clipping import CLIPS_MAX, build_clip_sliders, get_clip_filter
+from src.color_map import COLOR_MAP_ISOVALUE_DEFAULT
 from src.vtk_side_effects import import_for_rendering_core
-
-WINDOW_WIDTH = 640
-WINDOW_HEIGHT = 480
-
-CLIP_X_MIN = 1
-CLIP_X_DEFAULT_MAX = 250
-CLIP_X_DEFAULT = CLIP_X_DEFAULT_MAX
-
-CLIP_Y_MIN = 1
-CLIP_Y_DEFAULT_MAX = 250
-CLIP_Y_DEFAULT = CLIP_Y_DEFAULT_MAX
-
-CLIP_Z_MIN = 1
-CLIP_Z_DEFAULT_MAX = 270
-CLIP_Z_DEFAULT = CLIP_Z_DEFAULT_MAX
+from src.vtk_widget import build_default_vtk_renderer, build_default_vtk_widget
+from src.window import WINDOW_HEIGHT, WINDOW_WIDTH
 
 
 def parse_args():
@@ -50,7 +34,7 @@ def parse_args():
         "--clip",
         nargs=3,
         type=int,
-        default=[CLIP_X_DEFAULT, CLIP_Y_DEFAULT, CLIP_Z_DEFAULT],
+        default=CLIPS_MAX,
     )
     return parser.parse_args()
 
@@ -74,7 +58,7 @@ def build_gui(
         change_isovalue(value)
 
     def on_clip_changed():
-        change_clip(*(slider.value() for slider in clip_sliders))
+        change_clip(vtk_widget, *(slider.value() for slider in clip_sliders))
 
     window = QMainWindow()
     window.resize(WINDOW_WIDTH, WINDOW_HEIGHT)
@@ -102,26 +86,7 @@ def build_gui(
     isovalue_label = QLabel(str(_isovalue_default))
     layout.addWidget(isovalue_label, 1, 2)
 
-    clip_widgets = {
-        "Clip X": (CLIP_X_MIN, CLIP_X_DEFAULT_MAX, clips_default[0]),
-        "Clip Y": (CLIP_Y_MIN, CLIP_Y_DEFAULT_MAX, clips_default[1]),
-        "Clip Z": (CLIP_Z_MIN, CLIP_Z_DEFAULT_MAX, clips_default[2]),
-    }
-    clip_sliders: list[QSlider] = []
-    for i, (name, (min_value, max_value, default_value)) in enumerate(
-        clip_widgets.items(), start=2
-    ):
-        clip_sliders.append(
-            build_clip_widgets(
-                layout,
-                i,
-                name,
-                min_value,
-                max_value,
-                default_value,
-                on_clip_changed,
-            )
-        )
+    clip_sliders = build_clip_sliders(layout, clips_default, on_clip_changed)
 
     central.setLayout(layout)
     window.setCentralWidget(central)
@@ -139,17 +104,6 @@ def build_vtk_widget(
         contour_filter.SetValue(contour_index, value)
         widget.GetRenderWindow().Render()
 
-    def change_clips(x: float, y: float, z: float):
-        clip_planes.SetBounds(
-            CLIP_X_MIN - 1,
-            x,
-            CLIP_Y_MIN - 1,
-            y,
-            CLIP_Z_MIN - 1,
-            z,
-        )
-        widget.GetRenderWindow().Render()
-
     isovalue_range: tuple[float, float] = reader.GetOutput().GetScalarRange()
 
     _isovalue_default = get_default_isovalue(reader)
@@ -162,37 +116,12 @@ def build_vtk_widget(
     contour_filter.SetValue(contour_index, _isovalue_default)
     contour_filter.SetInputConnection(reader.GetOutputPort())
 
-    clip_planes = vtkPlanes()
-    clip_planes.SetBounds(
-        CLIP_X_MIN - 1,
-        clips_default[0],
-        CLIP_Y_MIN - 1,
-        clips_default[1],
-        CLIP_Z_MIN - 1,
-        clips_default[2],
-    )
-
-    clip_filter = vtkClipPolyData()
-    clip_filter.SetClipFunction(clip_planes)
-    clip_filter.SetInsideOut(True)
+    clip_filter, change_clips = get_clip_filter(clips_default)
     clip_filter.SetInputConnection(contour_filter.GetOutputPort())
 
-    isovalue_color_maps: dict[str, IsovalueColorMapping] = {
-        "skin": {
-            "value": 400,
-            "color": (229 / 255, 181 / 255, 161 / 255),
-        },
-        "muscle": {
-            "value": 1010,
-            "color": (171 / 255, 54 / 255, 54 / 255),
-        },
-        "bone": {
-            "value": 1135,
-            "color": (229 / 255, 229 / 255, 229 / 255),
-        },
-    }
+    isovalue_color_maps = COLOR_MAP_ISOVALUE_DEFAULT
     ctf = vtkColorTransferFunction()
-    for _, mapping in isovalue_color_maps.items():
+    for mapping in isovalue_color_maps.values():
         ctf.AddRGBPoint(mapping["value"], *mapping["color"])
 
     mapper = vtkDataSetMapper()
@@ -206,58 +135,18 @@ def build_vtk_widget(
     scalar_bar = vtkScalarBarActor()
     scalar_bar.SetLookupTable(ctf)
 
-    renderer = vtkRenderer()
-    renderer.AddActor(actor)
-    renderer.AddActor2D(scalar_bar)
-    colors = vtkNamedColors()
-    renderer.SetBackground(colors.GetColor3d("Gray"))  # type: ignore
+    renderer = build_default_vtk_renderer([actor], [scalar_bar])
 
-    widget = QVTKRenderWindowInteractor(parent)
-    widget.GetRenderWindow().AddRenderer(renderer)
-    widget.GetRenderWindow().GetInteractor().Initialize()
+    widget = build_default_vtk_widget(parent, renderer)
 
     change_isovalue(isovalue_default if isovalue_default else _isovalue_default)
 
     return widget, change_isovalue, change_clips
 
 
-class IsovalueColorMapping(TypedDict):
-    value: int
-    color: tuple[float, float, float]
-
-
 def get_default_isovalue(reader: vtkXMLImageDataReader) -> int:
     isovalue_range: tuple[float, float] = reader.GetOutput().GetScalarRange()
     return int((isovalue_range[0] + isovalue_range[1]) / 2)
-
-
-# pylint: disable=too-many-arguments
-def build_clip_widgets(
-    layout: QGridLayout,
-    row: int,
-    name: str,
-    min_value: int,
-    max_value: int,
-    default_value: int,
-    on_value_changed: Callable[[], None],
-):
-    def _on_value_changed(value: int):
-        label.setText(str(value))
-        on_value_changed()
-
-    layout.addWidget(QLabel(name), row, 0)
-
-    slider = QSlider(Qt.Orientation.Horizontal)
-    slider.setMinimum(min_value)
-    slider.setMaximum(max(max_value, default_value))
-    slider.setValue(default_value)
-    slider.valueChanged.connect(_on_value_changed)  # type: ignore
-    layout.addWidget(slider, row, 1)
-
-    label = QLabel(str(default_value))
-    layout.addWidget(label, row, 2)
-
-    return slider
 
 
 if __name__ == "__main__":
