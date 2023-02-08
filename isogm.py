@@ -13,7 +13,11 @@ from vtkmodules.vtkRenderingCore import (
     vtkDataSetMapper,
 )
 
-from src.clipping import CLIPS_MAX, build_clip_sliders, get_clip_filter
+from src.clipping import (
+    add_axes_clip_args,
+    build_axes_clip_sliders,
+    get_axes_clip_filter,
+)
 from src.vtk_side_effects import import_for_rendering_core
 from src.vtk_widget import build_default_vtk_renderer, build_default_vtk_widget
 from src.window import WINDOW_HEIGHT, WINDOW_WIDTH
@@ -25,12 +29,7 @@ def parse_args():
     parser.add_argument("-g", "--grad", required=True)
     parser.add_argument("-v", "--value", required=True)
     parser.add_argument("--cmap")
-    parser.add_argument(
-        "--clip",
-        nargs=3,
-        type=int,
-        default=CLIPS_MAX,
-    )
+    add_axes_clip_args(parser)
     return parser.parse_args()
 
 
@@ -75,7 +74,7 @@ def build_gui(
     )
     layout.addWidget(vtk_widget, 0, 0, 1, -1)
 
-    clip_sliders = build_clip_sliders(layout, 1, clips_default, on_clip_changed)
+    clip_sliders = build_axes_clip_sliders(layout, 1, clips_default, on_clip_changed)
 
     central.setLayout(layout)
     window.setCentralWidget(central)
@@ -99,7 +98,7 @@ def build_vtk_widget(
         contour_filter.SetValue(i, value)
     contour_filter.SetInputConnection(isovalue_reader.GetOutputPort())
 
-    clip_filter, change_clips = get_clip_filter(clips_default)
+    clip_filter, change_clips = get_axes_clip_filter(clips_default)
     clip_filter.SetInputConnection(contour_filter.GetOutputPort())
 
     gradient_reader = vtkXMLImageDataReader()

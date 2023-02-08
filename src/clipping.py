@@ -1,3 +1,4 @@
+import argparse
 from typing import Callable, TypedDict
 
 from PySide6.QtCore import Qt
@@ -7,12 +8,12 @@ from vtkmodules.vtkCommonDataModel import vtkPlanes
 from vtkmodules.vtkFiltersCore import vtkClipPolyData
 
 
-class ClipConfig(TypedDict):
+class AxesClipConfig(TypedDict):
     min: int
     max: int
 
 
-CLIPS_CONFIG: dict[str, ClipConfig] = {
+AXES_CLIP_CONFIG: dict[str, AxesClipConfig] = {
     "X": {
         "min": 1,
         "max": 250,
@@ -27,11 +28,21 @@ CLIPS_CONFIG: dict[str, ClipConfig] = {
     },
 }
 
-CLIPS_MIN = [clip["min"] for clip in CLIPS_CONFIG.values()]
-CLIPS_MAX = [clip["max"] for clip in CLIPS_CONFIG.values()]
+AXES_CLIP_MIN = [clip["min"] for clip in AXES_CLIP_CONFIG.values()]
+AXES_CLIP_MAX = [clip["max"] for clip in AXES_CLIP_CONFIG.values()]
 
 
-def build_clip_sliders(
+def add_axes_clip_args(parser: argparse.ArgumentParser):
+    parser.add_argument(
+        "--axes-clip",
+        nargs=3,
+        type=int,
+        default=AXES_CLIP_MIN,
+        help="Set the axes clip values",
+    )
+
+
+def build_axes_clip_sliders(
     layout: QGridLayout,
     start_row: int,
     clips_default: list[int],
@@ -39,14 +50,14 @@ def build_clip_sliders(
 ):
     clip_widgets = {
         f"Clip {name}": (values["min"], values["max"], clips_default[i])
-        for i, (name, values) in enumerate(CLIPS_CONFIG.items())
+        for i, (name, values) in enumerate(AXES_CLIP_CONFIG.items())
     }
     clip_sliders: list[QSlider] = []
     for i, (name, (min_value, max_value, default_value)) in enumerate(
         clip_widgets.items(), start=start_row
     ):
         clip_sliders.append(
-            build_clip_row_widgets(
+            build_axes_clip_row_widgets(
                 layout,
                 i,
                 name,
@@ -60,25 +71,27 @@ def build_clip_sliders(
     return clip_sliders
 
 
-def get_clip_filter(clips_default: list[int]):
-    def change_clips(widget: QVTKRenderWindowInteractor, x: float, y: float, z: float):
+def get_axes_clip_filter(clips_default: list[int]):
+    def change_axes_clips(
+        widget: QVTKRenderWindowInteractor, x: float, y: float, z: float
+    ):
         clip_planes.SetBounds(
-            CLIPS_MIN[0] - 1,
+            AXES_CLIP_MIN[0] - 1,
             x,
-            CLIPS_MIN[1] - 1,
+            AXES_CLIP_MIN[1] - 1,
             y,
-            CLIPS_MIN[2] - 1,
+            AXES_CLIP_MIN[2] - 1,
             z,
         )
         widget.GetRenderWindow().Render()
 
     clip_planes = vtkPlanes()
     clip_planes.SetBounds(
-        CLIPS_MIN[0] - 1,
+        AXES_CLIP_MIN[0] - 1,
         clips_default[0],
-        CLIPS_MIN[1] - 1,
+        AXES_CLIP_MIN[1] - 1,
         clips_default[1],
-        CLIPS_MIN[2] - 1,
+        AXES_CLIP_MIN[2] - 1,
         clips_default[2],
     )
 
@@ -86,11 +99,11 @@ def get_clip_filter(clips_default: list[int]):
     clip_filter.SetClipFunction(clip_planes)
     clip_filter.SetInsideOut(True)
     clip_filter.SetGenerateClipScalars(False)
-    return clip_filter, change_clips
+    return clip_filter, change_axes_clips
 
 
 # pylint: disable=too-many-arguments
-def build_clip_row_widgets(
+def build_axes_clip_row_widgets(
     layout: QGridLayout,
     row: int,
     name: str,

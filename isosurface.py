@@ -1,15 +1,8 @@
 import argparse
 import sys
 
-from PySide6.QtCore import QObject, Qt
-from PySide6.QtWidgets import (
-    QApplication,
-    QGridLayout,
-    QLabel,
-    QMainWindow,
-    QSlider,
-    QWidget,
-)
+from PySide6.QtCore import QObject
+from PySide6.QtWidgets import QApplication, QGridLayout, QMainWindow, QWidget
 from vtkmodules.vtkFiltersCore import vtkContourFilter
 from vtkmodules.vtkIOXML import vtkXMLImageDataReader
 from vtkmodules.vtkRenderingAnnotation import vtkScalarBarActor
@@ -19,8 +12,14 @@ from vtkmodules.vtkRenderingCore import (
     vtkDataSetMapper,
 )
 
-from src.clipping import CLIPS_MAX, build_clip_sliders, get_clip_filter
+from src.build_isovalue_slider import build_isovalue_slider
+from src.clipping import (
+    add_axes_clip_args,
+    build_axes_clip_sliders,
+    get_axes_clip_filter,
+)
 from src.color_map import COLOR_MAP_ISOVALUE_DEFAULT
+from src.read_vti import read_vti
 from src.vtk_side_effects import import_for_rendering_core
 from src.vtk_widget import build_default_vtk_renderer, build_default_vtk_widget
 from src.window import WINDOW_HEIGHT, WINDOW_WIDTH
@@ -30,20 +29,8 @@ def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("-i", "--input", required=True)
     parser.add_argument("--value", type=int)
-    parser.add_argument(
-        "--clip",
-        nargs=3,
-        type=int,
-        default=CLIPS_MAX,
-    )
+    add_axes_clip_args(parser)
     return parser.parse_args()
-
-
-def read_data(data_filename: str):
-    reader = vtkXMLImageDataReader()
-    reader.SetFileName(data_filename)
-    reader.Update()
-    return reader
 
 
 # Use GUI widgets to store the state of the application.
@@ -53,10 +40,6 @@ def build_gui(
     isovalue_default: int | None,
     clips_default: list[int],
 ):
-    def on_isovalue_changed(value: int):
-        isovalue_label.setText(str(value))
-        change_isovalue(value)
-
     def on_clip_changed():
         change_clip(vtk_widget, *(slider.value() for slider in clip_sliders))
 
@@ -73,20 +56,9 @@ def build_gui(
     _isovalue_default = (
         isovalue_default if isovalue_default else get_default_isovalue(reader)
     )
-    isovalue_min: float
-    isovalue_max: float
-    isovalue_min, isovalue_max = reader.GetOutput().GetScalarRange()
-    layout.addWidget(QLabel("Isovalue"), 1, 0)
-    isovalue_slider = QSlider(Qt.Orientation.Horizontal)
-    isovalue_slider.setMinimum(int(isovalue_min))
-    isovalue_slider.setMaximum(max(int(isovalue_max), _isovalue_default))
-    isovalue_slider.setValue(_isovalue_default)
-    isovalue_slider.valueChanged.connect(on_isovalue_changed)  # type: ignore
-    layout.addWidget(isovalue_slider, 1, 1)
-    isovalue_label = QLabel(str(_isovalue_default))
-    layout.addWidget(isovalue_label, 1, 2)
+    build_isovalue_slider(layout, 1, reader, _isovalue_default, change_isovalue)
 
-    clip_sliders = build_clip_sliders(layout, 2, clips_default, on_clip_changed)
+    clip_sliders = build_axes_clip_sliders(layout, 2, clips_default, on_clip_changed)
 
     central.setLayout(layout)
     window.setCentralWidget(central)
@@ -116,7 +88,7 @@ def build_vtk_widget(
     contour_filter.SetValue(contour_index, _isovalue_default)
     contour_filter.SetInputConnection(reader.GetOutputPort())
 
-    clip_filter, change_clips = get_clip_filter(clips_default)
+    clip_filter, change_clips = get_axes_clip_filter(clips_default)
     clip_filter.SetInputConnection(contour_filter.GetOutputPort())
 
     isovalue_color_maps = COLOR_MAP_ISOVALUE_DEFAULT
@@ -153,6 +125,6 @@ if __name__ == "__main__":
     import_for_rendering_core()
     args = parse_args()
     app = QApplication()
-    gui = build_gui(read_data(args.input), args.value, args.clip)
+    gui = build_gui(read_vti(args.input), args.value, args.clip)
     gui.show()
     sys.exit(app.exec())
