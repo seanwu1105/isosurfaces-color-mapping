@@ -12,13 +12,13 @@ from vtkmodules.vtkRenderingCore import (
     vtkDataSetMapper,
 )
 
-from src.build_isovalue_slider import build_isovalue_slider
 from src.clipping import (
     add_axes_clip_args,
     build_axes_clip_sliders,
     get_axes_clip_filter,
 )
 from src.color_map import COLOR_MAP_ISOVALUE_DEFAULT
+from src.isovalue import build_isovalue_slider, get_isovalue_mid
 from src.read_vti import read_vti
 from src.vtk_side_effects import import_for_rendering_core
 from src.vtk_widget import build_default_vtk_renderer, build_default_vtk_widget
@@ -54,7 +54,7 @@ def build_gui(
     layout.addWidget(vtk_widget, 0, 0, 1, -1)
 
     _isovalue_default = (
-        isovalue_default if isovalue_default else get_default_isovalue(reader)
+        isovalue_default if isovalue_default else get_isovalue_mid(reader)
     )
     build_isovalue_slider(layout, 1, reader, _isovalue_default, change_isovalue)
 
@@ -78,17 +78,17 @@ def build_vtk_widget(
 
     isovalue_range: tuple[float, float] = reader.GetOutput().GetScalarRange()
 
-    _isovalue_default = get_default_isovalue(reader)
+    isovalue_mid = get_isovalue_mid(reader)
 
     contour_filter = vtkContourFilter()
     contour_index = 0
 
     # Force the filter to have initial value. If not, the filter will not
     # generate any output even if the value is changed.
-    contour_filter.SetValue(contour_index, _isovalue_default)
+    contour_filter.SetValue(contour_index, isovalue_mid)
     contour_filter.SetInputConnection(reader.GetOutputPort())
 
-    clip_filter, change_clips = get_axes_clip_filter(clips_default)
+    clip_filter, change_clips = get_axes_clip_filter()
     clip_filter.SetInputConnection(contour_filter.GetOutputPort())
 
     isovalue_color_maps = COLOR_MAP_ISOVALUE_DEFAULT
@@ -111,14 +111,12 @@ def build_vtk_widget(
 
     widget = build_default_vtk_widget(parent, renderer)
 
-    change_isovalue(isovalue_default if isovalue_default else _isovalue_default)
+    # Set to user defined value if provided.
+    change_isovalue(isovalue_default if isovalue_default else isovalue_mid)
+    # Set to user defined value after we have the widget.
+    change_clips(widget, *clips_default)
 
     return widget, change_isovalue, change_clips
-
-
-def get_default_isovalue(reader: vtkXMLImageDataReader) -> int:
-    isovalue_range: tuple[float, float] = reader.GetOutput().GetScalarRange()
-    return int((isovalue_range[0] + isovalue_range[1]) / 2)
 
 
 if __name__ == "__main__":

@@ -28,3 +28,8 @@ def build_isovalue_slider(
     layout.addWidget(isovalue_slider, row, 1)
     isovalue_label = QLabel(str(default_value))
     layout.addWidget(isovalue_label, row, 2)
+
+
+def get_isovalue_mid(reader: vtkXMLImageDataReader) -> int:
+    isovalue_range: tuple[float, float] = reader.GetOutput().GetScalarRange()
+    return int((isovalue_range[0] + isovalue_range[1]) / 2)

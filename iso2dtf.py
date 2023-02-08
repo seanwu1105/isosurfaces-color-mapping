@@ -15,12 +15,13 @@ from vtkmodules.vtkIOXML import vtkXMLImageDataReader
 from vtkmodules.vtkRenderingAnnotation import vtkScalarBarActor
 from vtkmodules.vtkRenderingCore import vtkActor, vtkDataSetMapper
 
-from src.build_isovalue_slider import build_isovalue_slider
 from src.clipping import (
     add_axes_clip_args,
     build_axes_clip_sliders,
     get_axes_clip_filter,
 )
+from src.color_map import get_inferno16_color_map
+from src.isovalue import build_isovalue_slider, get_isovalue_mid
 from src.read_vti import read_vti
 from src.vtk_side_effects import import_for_rendering_core
 from src.vtk_widget import build_default_vtk_renderer, build_default_vtk_widget
@@ -71,12 +72,10 @@ def build_gui(
     )
     layout.addWidget(vtk_widget, 0, 0, 1, -1)
 
-    _isovalue_default = (
-        isovalue_default if isovalue_default else get_default_isovalue(isovalue_reader)
+    isovalue_mid = (
+        isovalue_default if isovalue_default else get_isovalue_mid(isovalue_reader)
     )
-    build_isovalue_slider(
-        layout, 1, isovalue_reader, _isovalue_default, change_isovalue
-    )
+    build_isovalue_slider(layout, 1, isovalue_reader, isovalue_mid, change_isovalue)
 
     grad_min: float
     grad_max: float
@@ -131,17 +130,17 @@ def build_vtk_widget(
         gradmax_clip_filter.SetValue(value)
         widget.GetRenderWindow().Render()
 
-    _isovalue_default = get_default_isovalue(isovalue_reader)
+    isovalue_mid = get_isovalue_mid(isovalue_reader)
 
     contour_filter = vtkContourFilter()
     contour_index = 0
 
     # Force the filter to have initial value. If not, the filter will not
     # generate any output even if the value is changed.
-    contour_filter.SetValue(contour_index, _isovalue_default)
+    contour_filter.SetValue(contour_index, isovalue_mid)
     contour_filter.SetInputConnection(isovalue_reader.GetOutputPort())
 
-    axes_clip_filter, change_axes_clips = get_axes_clip_filter(axes_clips_default)
+    axes_clip_filter, change_axes_clips = get_axes_clip_filter()
     axes_clip_filter.SetInputConnection(contour_filter.GetOutputPort())
 
     probe_filter = vtkProbeFilter()
@@ -161,27 +160,26 @@ def build_vtk_widget(
     gradmax_clip_filter.SetInputConnection(gradmin_clip_filter.GetOutputPort())
 
     mapper = vtkDataSetMapper()
-    mapper.SetScalarRange(gradient_range)
     mapper.SetInputConnection(gradmax_clip_filter.GetOutputPort())
 
     actor = vtkActor()
     actor.SetMapper(mapper)
 
     scalar_bar = vtkScalarBarActor()
-    scalar_bar.SetLookupTable(mapper.GetLookupTable())  # type: ignore
+    ctf = get_inferno16_color_map(gradient_range)
+    mapper.SetLookupTable(ctf)
+    scalar_bar.SetLookupTable(ctf)
 
     renderer = build_default_vtk_renderer([actor], [scalar_bar])
 
     widget = build_default_vtk_widget(parent, renderer)
 
-    change_isovalue(isovalue_default if isovalue_default else _isovalue_default)
+    # Set to user defined value if provided.
+    change_isovalue(isovalue_default if isovalue_default else isovalue_mid)
+    # Set to user defined value after we have the widget.
+    change_axes_clips(widget, *axes_clips_default)
 
     return widget, change_isovalue, change_axes_clips, change_gradmin, change_gradmax
-
-
-def get_default_isovalue(reader: vtkXMLImageDataReader) -> int:
-    isovalue_range: tuple[float, float] = reader.GetOutput().GetScalarRange()
-    return int((isovalue_range[0] + isovalue_range[1]) / 2)
 
 
 if __name__ == "__main__":

@@ -18,6 +18,7 @@ from src.clipping import (
     build_axes_clip_sliders,
     get_axes_clip_filter,
 )
+from src.color_map import get_inferno16_color_map
 from src.vtk_side_effects import import_for_rendering_core
 from src.vtk_widget import build_default_vtk_renderer, build_default_vtk_widget
 from src.window import WINDOW_HEIGHT, WINDOW_WIDTH
@@ -88,7 +89,7 @@ def build_vtk_widget(
     gradient_filename: str,
     selected_isovalues: list[int],
     color_map: dict[int, tuple[float, float, float]] | None,
-    clips_default: list[int],
+    axes_clips_default: list[int],
 ):
     isovalue_reader = vtkXMLImageDataReader()
     isovalue_reader.SetFileName(isovalue_filename)
@@ -98,39 +99,42 @@ def build_vtk_widget(
         contour_filter.SetValue(i, value)
     contour_filter.SetInputConnection(isovalue_reader.GetOutputPort())
 
-    clip_filter, change_clips = get_axes_clip_filter(clips_default)
+    clip_filter, change_clips = get_axes_clip_filter()
     clip_filter.SetInputConnection(contour_filter.GetOutputPort())
 
     gradient_reader = vtkXMLImageDataReader()
     gradient_reader.SetFileName(gradient_filename)
+    gradient_reader.Update()
+    gradient_range: tuple[float, float] = gradient_reader.GetOutput().GetScalarRange()
 
     probe_filter = vtkProbeFilter()
     probe_filter.SetInputConnection(clip_filter.GetOutputPort())
     probe_filter.SetSourceConnection(gradient_reader.GetOutputPort())
 
-    probe_filter.Update()
-    probe_range: tuple[float, float] = probe_filter.GetOutput().GetScalarRange()
-
     mapper = vtkDataSetMapper()
-    mapper.SetScalarRange(probe_range)
     mapper.SetInputConnection(probe_filter.GetOutputPort())
 
     actor = vtkActor()
     actor.SetMapper(mapper)
 
     scalar_bar = vtkScalarBarActor()
-    scalar_bar.SetLookupTable(mapper.GetLookupTable())  # type: ignore
 
-    if color_map is not None:
+    if color_map is None:
+        ctf = get_inferno16_color_map(gradient_range)
+    else:
         ctf = vtkColorTransferFunction()
         for value, color in color_map.items():
             ctf.AddRGBPoint(value, *color)
-        mapper.SetLookupTable(ctf)
-        scalar_bar.SetLookupTable(ctf)
+
+    mapper.SetLookupTable(ctf)
+    scalar_bar.SetLookupTable(ctf)
 
     renderer = build_default_vtk_renderer([actor], [scalar_bar])
 
     widget = build_default_vtk_widget(parent, renderer)
+
+    # Set to user defined value after we have the widget.
+    change_clips(widget, *axes_clips_default)
 
     return widget, change_clips
 

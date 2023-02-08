@@ -34,10 +34,11 @@ AXES_CLIP_MAX = [clip["max"] for clip in AXES_CLIP_CONFIG.values()]
 
 def add_axes_clip_args(parser: argparse.ArgumentParser):
     parser.add_argument(
-        "--axes-clip",
+        "--clip",
         nargs=3,
+        metavar=("X", "Y", "Z"),
         type=int,
-        default=AXES_CLIP_MIN,
+        default=AXES_CLIP_MAX,
         help="Set the axes clip values",
     )
 
@@ -71,7 +72,7 @@ def build_axes_clip_sliders(
     return clip_sliders
 
 
-def get_axes_clip_filter(clips_default: list[int]):
+def get_axes_clip_filter():
     def change_axes_clips(
         widget: QVTKRenderWindowInteractor, x: float, y: float, z: float
     ):
@@ -88,17 +89,18 @@ def get_axes_clip_filter(clips_default: list[int]):
     clip_planes = vtkPlanes()
     clip_planes.SetBounds(
         AXES_CLIP_MIN[0] - 1,
-        clips_default[0],
+        AXES_CLIP_MAX[0],
         AXES_CLIP_MIN[1] - 1,
-        clips_default[1],
+        AXES_CLIP_MAX[1],
         AXES_CLIP_MIN[2] - 1,
-        clips_default[2],
+        AXES_CLIP_MAX[2],
     )
 
     clip_filter = vtkClipPolyData()
     clip_filter.SetClipFunction(clip_planes)
     clip_filter.SetInsideOut(True)
     clip_filter.SetGenerateClipScalars(False)
+
     return clip_filter, change_axes_clips
 
 
