@@ -1,9 +1,8 @@
 import argparse
 import sys
-from typing import TypedDict
 
 from PySide6.QtCore import QObject
-from PySide6.QtWidgets import QApplication, QGridLayout, QMainWindow, QWidget
+from PySide6.QtWidgets import QApplication
 from vtkmodules.vtkFiltersCore import vtkContourFilter, vtkProbeFilter
 from vtkmodules.vtkIOXML import vtkXMLImageDataReader
 from vtkmodules.vtkRenderingAnnotation import vtkScalarBarActor
@@ -21,7 +20,7 @@ from src.clipping import (
 from src.color_map import get_inferno16_color_map
 from src.vtk_side_effects import import_for_rendering_core
 from src.vtk_widget import build_default_vtk_renderer, build_default_vtk_widget
-from src.window import WINDOW_HEIGHT, WINDOW_WIDTH
+from src.window import build_default_window
 
 
 def parse_args():
@@ -60,10 +59,7 @@ def build_gui(
     def on_clip_changed():
         change_clip(vtk_widget, *(slider.value() for slider in clip_sliders))
 
-    window = QMainWindow()
-    window.resize(WINDOW_WIDTH, WINDOW_HEIGHT)
-    central = QWidget()
-    layout = QGridLayout()
+    window, central, layout = build_default_window()
 
     vtk_widget, change_clip = build_vtk_widget(
         central,
@@ -77,8 +73,6 @@ def build_gui(
 
     clip_sliders = build_axes_clip_sliders(layout, 1, clips_default, on_clip_changed)
 
-    central.setLayout(layout)
-    window.setCentralWidget(central)
     return window
 
 
@@ -137,11 +131,6 @@ def build_vtk_widget(
     change_clips(widget, *axes_clips_default)
 
     return widget, change_clips
-
-
-class IsovalueColorMapping(TypedDict):
-    value: int
-    color: tuple[float, float, float]
 
 
 if __name__ == "__main__":

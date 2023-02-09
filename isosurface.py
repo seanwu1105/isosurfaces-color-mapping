@@ -2,7 +2,7 @@ import argparse
 import sys
 
 from PySide6.QtCore import QObject
-from PySide6.QtWidgets import QApplication, QGridLayout, QMainWindow, QWidget
+from PySide6.QtWidgets import QApplication
 from vtkmodules.vtkFiltersCore import vtkContourFilter
 from vtkmodules.vtkIOXML import vtkXMLImageDataReader
 from vtkmodules.vtkRenderingAnnotation import vtkScalarBarActor
@@ -22,7 +22,7 @@ from src.isovalue import build_isovalue_slider, get_isovalue_mid
 from src.read_vti import read_vti
 from src.vtk_side_effects import import_for_rendering_core
 from src.vtk_widget import build_default_vtk_renderer, build_default_vtk_widget
-from src.window import WINDOW_HEIGHT, WINDOW_WIDTH
+from src.window import build_default_window
 
 
 def parse_args():
@@ -43,10 +43,7 @@ def build_gui(
     def on_clip_changed():
         change_clip(vtk_widget, *(slider.value() for slider in clip_sliders))
 
-    window = QMainWindow()
-    window.resize(WINDOW_WIDTH, WINDOW_HEIGHT)
-    central = QWidget()
-    layout = QGridLayout()
+    window, central, layout = build_default_window()
 
     vtk_widget, change_isovalue, change_clip = build_vtk_widget(
         central, reader, isovalue_default, clips_default
@@ -60,8 +57,6 @@ def build_gui(
 
     clip_sliders = build_axes_clip_sliders(layout, 2, clips_default, on_clip_changed)
 
-    central.setLayout(layout)
-    window.setCentralWidget(central)
     return window
 
 
