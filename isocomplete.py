@@ -115,6 +115,13 @@ def build_vtk_widget(
     # Set to user defined value after we have the widget.
     change_all_actor_clips(widget, *axes_clips_default)
 
+    # Enable depth peeling.
+    widget.GetRenderWindow().SetAlphaBitPlanes(True)
+    widget.GetRenderWindow().SetMultiSamples(0)
+    renderer.SetUseDepthPeeling(True)
+    renderer.SetMaximumNumberOfPeels(100)
+    renderer.SetOcclusionRatio(0.0)
+
     return widget, change_all_actor_clips
 
 
