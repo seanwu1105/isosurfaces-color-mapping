@@ -160,7 +160,8 @@ variant than the bone.
 
 ## Task 4 - Complete Visualization
 
-See parameters in [assets/params.txt](assets/params.txt).
+See parameters in [assets/head_params.txt](assets/head_params.txt) and
+[assets/feat_params.txt](assets/feat_params.txt).
 
 ### Head
 
