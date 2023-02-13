@@ -21,7 +21,7 @@ from src.clipping import (
     get_axes_clip_filter,
 )
 from src.color_map import get_inferno16_color_map
-from src.isovalue import build_isovalue_slider, get_isovalue_mid
+from src.isovalue import get_isovalue_mid
 from src.read_vti import read_vti
 from src.vtk_side_effects import import_for_rendering_core
 from src.vtk_widget import build_default_vtk_renderer, build_default_vtk_widget
@@ -32,7 +32,7 @@ def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("-i", "--input", required=True)
     parser.add_argument("-g", "--grad", required=True)
-    parser.add_argument("--value", type=int)
+    parser.add_argument("-v", "--value", type=int, required=True)
     add_axes_clip_args(parser)
     return parser.parse_args()
 
@@ -63,7 +63,6 @@ def build_gui(
 
     (
         vtk_widget,
-        change_isovalue,
         change_axes_clip,
         change_gradmin,
         change_gradmax,
@@ -71,11 +70,6 @@ def build_gui(
         central, isovalue_reader, gradient_reader, isovalue_default, axes_clip_default
     )
     layout.addWidget(vtk_widget, 0, 0, 1, -1)
-
-    isovalue_mid = (
-        isovalue_default if isovalue_default else get_isovalue_mid(isovalue_reader)
-    )
-    build_isovalue_slider(layout, 1, isovalue_reader, isovalue_mid, change_isovalue)
 
     grad_min: float
     grad_max: float
@@ -179,7 +173,7 @@ def build_vtk_widget(
     # Set to user defined value after we have the widget.
     change_axes_clips(widget, *axes_clips_default)
 
-    return widget, change_isovalue, change_axes_clips, change_gradmin, change_gradmax
+    return widget, change_axes_clips, change_gradmin, change_gradmax
 
 
 if __name__ == "__main__":

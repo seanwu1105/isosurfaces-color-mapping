@@ -210,10 +210,9 @@ should meet the following requirements:
 
 - Take in input the name of both scalar volume and gradient magnitude datasets
   to be processed from the command line.
-- Optional: take in input the initial isovalue to consider
+- Take in input the isovalue to consider
 - Provide a GUI with two slider bars to allow the user to control the range (min
   et max) of gradient magnitude values to select
-- Provide an additional slider bar to control the value of the selected isovalue
 - Provide the same GUI as in Task 1 to control the position of 3 clipping planes
   to be used in the visualization
 - Perform a resampling of the gradient magnitude on the isosurface
@@ -231,13 +230,13 @@ magnitude range independently for each surface.
 Your program will have the following API:
 
 ```sh
-python iso2dtf.py -i [--input] <data> -g [--grad] <gradientmag> -v [—value] <value> [--clip <X> <Y> <Z>]
+python iso2dtf.py -i [--input] <data> -g [--grad] <gradientmag> -v [--value] <value> [--clip <X> <Y> <Z>]
 ```
 
 where `<data>` is the 3D scalar dataset and `<gradientmag>` is the corresponding
-gradient magnitude to visualize, `<value>` is the initial isovalue (optional) ,
-and `<X>` `<Y>` `<Z>` are the optional initial positions of the three clipping
-planes (optional as well).
+gradient magnitude to visualize, `<value>` is the initial isovalue, and `<X>`
+`<Y>` `<Z>` are the optional initial positions of the three clipping planes
+(optional as well).
 
 ### Report
 
