@@ -83,4 +83,4 @@ isosurfaces. The format of this file will be as follows.
 
 ## Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md).
+See [CONTRIBUTING.md](./CONTRIBUTING.md).
