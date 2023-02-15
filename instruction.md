@@ -325,7 +325,7 @@ applications.
 
 ## Datasets
 
-The datasets are available online. All datasets are of type vtkStructuredPoints,
-which is itself a specialized type of vtkImageData.
-
-!! TODO !!
+The datasets are available
+[online](https://www.cs.purdue.edu/homes/cs530/projects/project2.html). All
+datasets are of type vtkStructuredPoints, which is itself a specialized type of
+vtkImageData.
